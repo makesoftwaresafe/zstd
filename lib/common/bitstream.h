@@ -14,9 +14,6 @@
 #ifndef BITSTREAM_H_MODULE
 #define BITSTREAM_H_MODULE
 
-#if defined (__cplusplus)
-extern "C" {
-#endif
 /*
 *  This API consists of small unitary functions, which must be inlined for best performance.
 *  Since link-time-optimization is not available for all compilers,
@@ -31,7 +28,6 @@ extern "C" {
 #include "debug.h"          /* assert(), DEBUGLOG(), RAWLOG() */
 #include "error_private.h"  /* error codes and messages */
 #include "bits.h"           /* ZSTD_highbit32 */
-
 
 /*=========================================
 *  Target specific
@@ -163,10 +159,15 @@ MEM_STATIC size_t BIT_initCStream(BIT_CStream_t* bitC,
     return 0;
 }
 
-FORCE_INLINE_TEMPLATE size_t BIT_getLowerBits(size_t bitContainer, U32 const nbBits)
+FORCE_INLINE_TEMPLATE size_t BIT_getLowerBits(BitContainerType bitContainer, U32 const nbBits)
 {
 #if defined(STATIC_BMI2) && STATIC_BMI2 == 1 && !defined(ZSTD_NO_INTRINSICS)
-    return  _bzhi_u64(bitContainer, nbBits);
+#  if (defined(__x86_64__) || defined(_M_X64)) && !defined(__ILP32__)
+    return _bzhi_u64(bitContainer, nbBits);
+#  else
+    DEBUG_STATIC_ASSERT(sizeof(bitContainer) == sizeof(U32));
+    return _bzhi_u32(bitContainer, nbBits);
+#  endif
 #else
     assert(nbBits < BIT_MASK_SIZE);
     return bitContainer & BIT_mask[nbBits];
@@ -237,7 +238,7 @@ MEM_STATIC size_t BIT_closeCStream(BIT_CStream_t* bitC)
     BIT_addBitsFast(bitC, 1, 1);   /* endMark */
     BIT_flushBits(bitC);
     if (bitC->ptr >= bitC->endPtr) return 0; /* overflow detected */
-    return (bitC->ptr - bitC->startPtr) + (bitC->bitPos > 0);
+    return (size_t)(bitC->ptr - bitC->startPtr) + (bitC->bitPos > 0);
 }
 
 
@@ -313,7 +314,7 @@ FORCE_INLINE_TEMPLATE size_t BIT_getMiddleBits(BitContainerType bitContainer, U3
      * such cpus old (pre-Haswell, 2013) and their performance is not of that
      * importance.
      */
-#if defined(__x86_64__) || defined(_M_X86)
+#if defined(__x86_64__) || defined(_M_X64)
     return (bitContainer >> (start & regMask)) & ((((U64)1) << nbBits) - 1);
 #else
     return (bitContainer >> (start & regMask)) & BIT_mask[nbBits];
@@ -449,9 +450,5 @@ MEM_STATIC unsigned BIT_endOfDStream(const BIT_DStream_t* DStream)
 {
     return ((DStream->ptr == DStream->start) && (DStream->bitsConsumed == sizeof(DStream->bitContainer)*8));
 }
-
-#if defined (__cplusplus)
-}
-#endif
 
 #endif /* BITSTREAM_H_MODULE */

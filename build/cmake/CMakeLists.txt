@@ -7,7 +7,7 @@
 # in the COPYING file in the root directory of this source tree).
 # ################################################################
 
-cmake_minimum_required(VERSION 3.5 FATAL_ERROR)
+cmake_minimum_required(VERSION 3.10 FATAL_ERROR)
 
 # As of 2018-12-26 ZSTD has been validated to build with cmake version 3.13.2 new policies.
 # Set and use the newest cmake policies that are validated to work
@@ -84,6 +84,11 @@ endif ()
 
 if (ANDROID)
     set(ZSTD_MULTITHREAD_SUPPORT_DEFAULT OFF)
+    # Old versions of bionic libc don't have fseeko/ftello
+    if ((NOT ${ANDROID_PLATFORM_LEVEL}) OR ${ANDROID_PLATFORM_LEVEL} VERSION_LESS 24)
+        message(STATUS "Setting compile definitions for old Android API")
+        add_compile_definitions(LIBC_NO_FSEEKO)
+    endif ()
 else()
     set(ZSTD_MULTITHREAD_SUPPORT_DEFAULT ON)
 endif()

@@ -93,7 +93,7 @@
  * Only enable assembly for GNU C compatible compilers,
  * because other platforms may not support GAS assembly syntax.
  *
- * Only enable assembly for Linux / MacOS, other platforms may
+ * Only enable assembly for Linux / MacOS / Win32, other platforms may
  * work, but they haven't been tested. This could likely be
  * extended to BSD systems.
  *
@@ -101,7 +101,7 @@
  * 100% of code to be instrumented to work.
  */
 #if defined(__GNUC__)
-#  if defined(__linux__) || defined(__linux) || defined(__APPLE__)
+#  if defined(__linux__) || defined(__linux) || defined(__APPLE__) || defined(_WIN32)
 #    if ZSTD_MEMORY_SANITIZER
 #      define ZSTD_ASM_SUPPORTED 0
 #    elif ZSTD_DATAFLOW_SANITIZER
